@@ -10,6 +10,7 @@ import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+import textwrap
 from dataclasses import dataclass
 from html import unescape
 from pathlib import Path
@@ -216,7 +217,7 @@ def launch_installer(installer_path: Path):
         [
             str(installer_path),
             "/SP-",
-            "/VERYSILENT",
+            "/SILENT",
             "/NOCANCEL",
             "/NORESTART",
             "/CLOSEAPPLICATIONS",
@@ -228,20 +229,46 @@ def launch_installer(installer_path: Path):
 
 
 def schedule_installer_after_exit(installer_path: Path, pid: int):
-    launcher_path = Path(tempfile.gettempdir()) / f"{APP_ID}_update_launcher.cmd"
-    launcher_script = f"""@echo off
-setlocal
-:waitloop
-tasklist /FI "PID eq {pid}" | find "{pid}" >nul
-if not errorlevel 1 (
-    timeout /t 1 /nobreak >nul
-    goto waitloop
-)
-start "" "{installer_path}" /SP- /VERYSILENT /NOCANCEL /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS
-"""
-    launcher_path.write_text(launcher_script, encoding="ascii")
+    launcher_path = Path(tempfile.gettempdir()) / f"{APP_ID}_update_launcher.ps1"
+    launcher_script = textwrap.dedent(
+        f"""
+        $pidToWait = {pid}
+        $installerPath = {str(installer_path)!r}
+        $logPath = Join-Path $env:TEMP "{APP_ID}_update_launcher.log"
+
+        try {{
+            while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) {{
+                Start-Sleep -Milliseconds 700
+            }}
+
+            Start-Sleep -Seconds 1
+
+            Start-Process -FilePath $installerPath -ArgumentList @(
+                '/SP-',
+                '/SILENT',
+                '/NOCANCEL',
+                '/NORESTART',
+                '/CLOSEAPPLICATIONS',
+                '/FORCECLOSEAPPLICATIONS'
+            )
+        }} catch {{
+            $_ | Out-File -FilePath $logPath -Encoding utf8
+            throw
+        }}
+        """
+    ).strip()
+    launcher_path.write_text(launcher_script, encoding="utf-8")
     subprocess.Popen(
-        ["cmd.exe", "/c", str(launcher_path)],
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-File",
+            str(launcher_path),
+        ],
         close_fds=True,
         creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0),
     )

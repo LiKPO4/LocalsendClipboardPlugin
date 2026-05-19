@@ -16,6 +16,7 @@ from pathlib import Path
 from tkinter import messagebox
 from tkinter import scrolledtext
 import tkinter as tk
+from tkinter import ttk
 from typing import Callable, Optional
 
 from .assets import app_icon_ico_path, app_icon_png_path
@@ -281,6 +282,8 @@ class UpdateDialog:
         self._icon_photo = None
         self._set_window_icon(self.window)
         self._status_var = tk.StringVar(value=f"当前版本 v{current_version}，检测到新版本 v{release.version}")
+        self._progress_var = tk.DoubleVar(value=0.0)
+        self._progress_text_var = tk.StringVar(value="")
         self._busy = False
 
         self._create_widgets()
@@ -356,15 +359,42 @@ class UpdateDialog:
         footer = tk.Frame(container, bg=self.COLORS["bg"])
         footer.pack(fill=tk.X, pady=(14, 0))
 
+        status_block = tk.Frame(footer, bg=self.COLORS["bg"])
+        status_block.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
         self.status = tk.Label(
-            footer,
+            status_block,
             textvariable=self._status_var,
             font=("Microsoft YaHei UI", 9),
             bg=self.COLORS["bg"],
             fg=self.COLORS["success"],
             anchor="w",
         )
-        self.status.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.status.pack(fill=tk.X, anchor="w")
+
+        progress_row = tk.Frame(status_block, bg=self.COLORS["bg"])
+        progress_row.pack(fill=tk.X, pady=(8, 0))
+
+        self.progress_bar = ttk.Progressbar(
+            progress_row,
+            orient="horizontal",
+            mode="determinate",
+            variable=self._progress_var,
+            maximum=100,
+            length=220,
+        )
+        self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.progress_label = tk.Label(
+            progress_row,
+            textvariable=self._progress_text_var,
+            font=("Consolas", 9, "bold"),
+            bg=self.COLORS["bg"],
+            fg=self.COLORS["accent"],
+            width=8,
+            anchor="e",
+        )
+        self.progress_label.pack(side=tk.LEFT, padx=(10, 0))
 
         btns = tk.Frame(footer, bg=self.COLORS["bg"])
         btns.pack(side=tk.RIGHT)
@@ -410,6 +440,9 @@ class UpdateDialog:
         self._busy = busy
         self.update_btn.configure(state=tk.DISABLED if busy else tk.NORMAL)
         self.cancel_btn.configure(state=tk.DISABLED if busy else tk.NORMAL)
+        if not busy:
+            self._progress_var.set(0)
+            self._progress_text_var.set("")
 
     def _start_update(self):
         asset = select_installer_asset(self.release)
@@ -419,6 +452,8 @@ class UpdateDialog:
 
         self._set_busy(True)
         self._status_var.set("正在下载更新包...")
+        self._progress_var.set(0)
+        self._progress_text_var.set("0%")
 
         worker = threading.Thread(target=self._download_and_launch, args=(asset,), daemon=True)
         worker.start()
@@ -433,8 +468,13 @@ class UpdateDialog:
                 if total > 0:
                     percent = int(downloaded * 100 / total)
                     text = f"正在下载更新包... {percent}%"
+                    self.window.after(0, lambda: self._progress_var.set(percent))
+                    self.window.after(0, lambda: self._progress_text_var.set(f"{percent}%"))
                 else:
-                    text = f"正在下载更新包... {downloaded // 1024} KB"
+                    downloaded_mb = downloaded / (1024 * 1024)
+                    text = f"正在下载更新包... {downloaded_mb:.1f} MB"
+                    self.window.after(0, lambda: self._progress_var.set(0))
+                    self.window.after(0, lambda: self._progress_text_var.set(f"{downloaded_mb:.1f} MB"))
                 self.window.after(0, lambda: self._status_var.set(text))
 
             download_release_asset(asset, installer_path, progress_callback=on_progress)

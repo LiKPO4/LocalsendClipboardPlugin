@@ -1,23 +1,28 @@
 # Changelog
 
+## 1.4.3
+
+- 下载更新包时新增进度条和百分比显示。
+- 更新说明统一使用中文展示。
+
 ## 1.4.2
 
-- Added a prominent update entry card to the main settings window.
-- Added an immediate visible progress dialog while checking for updates.
-- Added an HTML fallback when the GitHub Release API is rate limited.
+- 在主设置界面新增更显眼的“版本与更新”卡片。
+- 检查更新时先显示“正在检查”的可见反馈。
+- GitHub Release API 被限流时，增加网页抓取兜底。
 
 ## 1.4.1
 
-- Improved the no-update feedback so users always get a clear completion dialog.
-- Improved the self-update flow to prompt the user to close the running app before continuing installation.
+- 优化“已是最新版本”时的提示反馈，避免看起来像没有反应。
+- 优化自更新流程，先提示关闭正在运行的软件，再继续安装。
 
 ## 1.3.0
 
-- Reduced package size by removing extra notification dependencies and trimming the PyInstaller bundle.
-- Improved clipboard copy reliability with retry logic and safer clipboard handle cleanup.
-- Added Inno Setup based installer packaging for direct installation.
-- Added repository metadata files for GitHub publishing, including `README.md` and `.gitignore`.
+- 去掉额外通知依赖并精简 PyInstaller 打包内容，减小安装包体积。
+- 为剪贴板写入增加重试和更稳妥的资源释放，提高稳定性。
+- 新增基于 Inno Setup 的安装包构建流程。
+- 补充 `README.md`、`.gitignore` 等仓库发布所需文件。
 
 ## 1.2.4
 
-- Adjusted the notification implementation.
+- 调整通知实现。

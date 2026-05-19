@@ -1,11 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+
+project_dir = Path.cwd()
+
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        (str(project_dir / 'assets' / 'app_icon.ico'), 'assets'),
+        (str(project_dir / 'assets' / 'app_icon.png'), 'assets'),
+    ],
     hiddenimports=[
         'PIL',
         'PIL.Image',
@@ -68,6 +75,7 @@ exe = EXE(
     runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
+    icon=str(project_dir / 'assets' / 'app_icon.ico'),
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,

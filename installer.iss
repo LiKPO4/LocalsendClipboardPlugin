@@ -1,6 +1,6 @@
 #define MyAppName "LocalSend图片剪贴板插件"
 #ifndef AppVersion
-  #define AppVersion "1.3.0"
+  #define AppVersion "1.4.1"
 #endif
 #define MyAppPublisher "LocalSendClipboardPlugin"
 #define MyAppExeName "LocalSendClipboardPlugin.exe"
@@ -10,6 +10,7 @@ AppId=LocalSendClipboardPlugin
 AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppPublisher={#MyAppPublisher}
+AppMutex=LocalSendClipboardPlugin_SingleInstance_Mutex_v2
 DefaultDirName={localappdata}\Programs\LocalSendClipboardPlugin
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
@@ -20,6 +21,9 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
+CloseApplications=yes
+CloseApplicationsFilter={#MyAppExeName}
+RestartApplications=no
 
 [Languages]
 Name: "chinesesimp"; MessagesFile: "compiler:Default.isl"

@@ -3,6 +3,7 @@ from tkinter import filedialog, ttk
 from pathlib import Path
 from typing import Callable, Optional
 
+from .assets import app_icon_ico_path, app_icon_png_path
 from .config import Config, APP_NAME, APP_VERSION
 
 
@@ -24,10 +25,12 @@ class ModernSettingsWindow:
         'success': '#16a34a',
     }
 
-    def __init__(self, config: Config, on_save: Optional[Callable] = None):
+    def __init__(self, config: Config, on_save: Optional[Callable] = None, on_check_update: Optional[Callable] = None):
         self.config = config
         self.on_save = on_save
+        self.on_check_update = on_check_update
         self.root = None
+        self._icon_photo = None
         self._create_window()
 
     def _create_window(self):
@@ -39,7 +42,13 @@ class ModernSettingsWindow:
         self.root.configure(bg=self.COLORS['bg_primary'])
 
         try:
-            self.root.iconbitmap('icon.ico')
+            self.root.iconbitmap(str(app_icon_ico_path()))
+        except Exception:
+            pass
+
+        try:
+            self._icon_photo = tk.PhotoImage(file=str(app_icon_png_path()))
+            self.root.iconphoto(True, self._icon_photo)
         except Exception:
             pass
 
@@ -332,6 +341,23 @@ class ModernSettingsWindow:
         btn_container = tk.Frame(content, bg=self.COLORS['bg_primary'])
         btn_container.pack(side=tk.RIGHT)
 
+        update_btn = tk.Button(
+            btn_container,
+            text="检查更新",
+            command=self._check_update,
+            font=('Microsoft YaHei UI', 10),
+            bg=self.COLORS['accent_soft'],
+            fg=self.COLORS['accent'],
+            activebackground='#c7ddff',
+            activeforeground=self.COLORS['accent'],
+            relief='flat',
+            bd=0,
+            padx=18,
+            pady=7,
+            cursor='hand2'
+        )
+        update_btn.pack(side=tk.LEFT, padx=(0, 10))
+
         cancel_btn = tk.Button(
             btn_container,
             text="取消",
@@ -367,6 +393,10 @@ class ModernSettingsWindow:
             cursor='hand2'
         )
         save_btn.pack(side=tk.LEFT)
+
+    def _check_update(self):
+        if self.on_check_update:
+            self.on_check_update(self.root)
 
     def _browse_dir(self):
         """浏览目录"""

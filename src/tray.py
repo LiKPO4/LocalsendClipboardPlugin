@@ -5,14 +5,15 @@ import traceback
 import ctypes
 from pathlib import Path
 from typing import Optional
-from PIL import Image
 from pystray._base import MenuItem as Item
 from pystray._win32 import Icon as TrayIcon
 
+from .assets import load_app_icon_image
 from .config import Config, APP_NAME, APP_VERSION
 from .watcher import FileWatcher
 from .settings_window import SettingsWindow
 from .notifier import notifier
+from .updater import show_update_flow
 
 
 class SingleInstance:
@@ -87,9 +88,10 @@ class TrayApp:
         try:
             self.config = Config.load()
             self.watcher = FileWatcher(self.config, on_image_copied=self._on_image_copied)
-            self.tray: Optional[pystray.Icon] = None
+            self.tray: Optional[TrayIcon] = None
 
             self._show_settings_event = threading.Event()
+            self._show_update_event = threading.Event()
             self._running = True
             self._settings_thread: Optional[threading.Thread] = None
 
@@ -101,20 +103,11 @@ class TrayApp:
 
     def _create_tray(self):
         try:
-            icon_image = self._create_icon_image()
-
-            menu = (
-                Item(f"状态: 运行中", None, enabled=False),
-                Item("打开设置", self._open_settings, default=True),
-                Item("重启监听", self._restart_watcher),
-                Item("退出", self._quit),
-            )
-
             self.tray = TrayIcon(
                 "localsend_clipboard",
-                icon_image,
+                load_app_icon_image(),
                 f"{APP_NAME} v{APP_VERSION}",
-                menu
+                self._build_menu("运行中")
             )
             notifier.register_tray_icon(self.tray)
         except Exception as e:
@@ -122,38 +115,28 @@ class TrayApp:
             traceback.print_exc()
             raise
 
-    def _create_icon_image(self) -> Image.Image:
-        size = 64
-        image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-
-        from PIL import ImageDraw
-        draw = ImageDraw.Draw(image)
-
-        draw.rectangle([8, 8, 56, 56], fill=(66, 133, 244, 255), outline=(33, 66, 122, 255), width=2)
-
-        draw.rectangle([16, 20, 48, 44], fill=(255, 255, 255, 255))
-
-        draw.ellipse([20, 24, 30, 34], fill=(76, 175, 80, 255))
-        draw.polygon([(32, 40), (40, 30), (48, 40)], fill=(255, 193, 7, 255))
-
-        return image
+    def _build_menu(self, status: str):
+        return (
+            Item(f"状态: {status}", None, enabled=False),
+            Item("打开设置", self._open_settings, default=True),
+            Item("检查更新", self._request_update_check),
+            Item("重启监听", self._restart_watcher),
+            Item("退出", self._quit),
+        )
 
     def _on_image_copied(self, file_path: Path):
         self._update_status(f"已复制: {file_path.name}")
 
     def _update_status(self, status: str):
         if self.tray:
-            menu = (
-                Item(f"状态: {status}", None, enabled=False),
-                Item("打开设置", self._open_settings, default=True),
-                Item("重启监听", self._restart_watcher),
-                Item("退出", self._quit),
-            )
-            self.tray.menu = menu
+            self.tray.menu = self._build_menu(status)
 
     def _open_settings(self):
         """从托盘菜单调用（pystray线程），设置事件触发设置窗口显示"""
         self._show_settings_event.set()
+
+    def _request_update_check(self):
+        self._show_update_event.set()
 
     def _show_settings_window(self):
         """在独立线程中创建Tkinter设置窗口"""
@@ -162,10 +145,25 @@ class TrayApp:
                 self.config = new_config
                 self.watcher.update_watch_dir(new_config.watch_dir)
 
-            window = SettingsWindow(self.config, on_save=on_save)
+            window = SettingsWindow(
+                self.config,
+                on_save=on_save,
+                on_check_update=self._show_update_dialog,
+            )
             window.show()
         except Exception as e:
             print(f"[ERROR] 显示设置窗口失败: {e}")
+            traceback.print_exc()
+
+    def _show_update_dialog(self, parent=None):
+        try:
+            show_update_flow(
+                current_version=APP_VERSION,
+                on_apply_update=self._quit,
+                parent=parent,
+            )
+        except Exception as e:
+            print(f"[ERROR] 显示更新窗口失败: {e}")
             traceback.print_exc()
 
     def _settings_thread_target(self):
@@ -175,6 +173,9 @@ class TrayApp:
                 if self._show_settings_event.is_set():
                     self._show_settings_event.clear()
                     self._show_settings_window()
+                if self._show_update_event.is_set():
+                    self._show_update_event.clear()
+                    self._show_update_dialog()
                 time.sleep(0.5)
             except Exception as e:
                 print(f"[ERROR] 设置线程异常: {e}")

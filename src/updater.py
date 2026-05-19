@@ -8,8 +8,10 @@ import subprocess
 import tempfile
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from html import unescape
 from pathlib import Path
 from tkinter import messagebox
 from tkinter import scrolledtext
@@ -22,6 +24,7 @@ from .config import APP_ID, APP_NAME, APP_VERSION
 GITHUB_OWNER = "LiKPO4"
 GITHUB_REPO = "LocalsendClipboardPlugin"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+LATEST_RELEASE_PAGE = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 INSTALLER_PREFIX = "LocalSendClipboardPlugin-Setup-"
 REQUEST_HEADERS = {
     "Accept": "application/vnd.github+json",
@@ -57,6 +60,8 @@ def fetch_latest_release(timeout: int = 15) -> ReleaseInfo:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.load(response)
     except urllib.error.HTTPError as exc:
+        if exc.code == 403:
+            return fetch_latest_release_from_html(timeout=timeout)
         raise UpdateError(f"GitHub 接口返回错误：HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
         raise UpdateError("无法连接 GitHub，请检查网络后重试。") from exc
@@ -82,8 +87,75 @@ def fetch_latest_release(timeout: int = 15) -> ReleaseInfo:
     )
 
 
+def fetch_latest_release_from_html(timeout: int = 15) -> ReleaseInfo:
+    request = urllib.request.Request(LATEST_RELEASE_PAGE, headers=REQUEST_HEADERS)
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            final_url = response.geturl()
+            html_text = response.read().decode("utf-8", errors="ignore")
+    except urllib.error.URLError as exc:
+        raise UpdateError("无法连接 GitHub，请检查网络后重试。") from exc
+
+    tag_name = final_url.rstrip("/").split("/")[-1]
+    body = extract_release_body_from_html(html_text)
+    assets = extract_release_assets_from_html(html_text)
+
+    return ReleaseInfo(
+        tag_name=tag_name,
+        version=normalize_version(tag_name),
+        body=body,
+        html_url=final_url,
+        assets=assets,
+    )
+
+
 def normalize_version(version: str) -> str:
     return version.lstrip("vV").strip()
+
+
+def extract_release_body_from_html(html_text: str) -> str:
+    patterns = [
+        r'<div[^>]*class="[^"]*markdown-body[^"]*"[^>]*>(.*?)</div>',
+        r'<div[^>]*data-test-selector="body-content"[^>]*>(.*?)</div>',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, html_text, re.DOTALL | re.IGNORECASE)
+        if not match:
+            continue
+
+        content = match.group(1)
+        content = re.sub(r"<br\s*/?>", "\n", content, flags=re.IGNORECASE)
+        content = re.sub(r"</p>", "\n\n", content, flags=re.IGNORECASE)
+        content = re.sub(r"</li>", "\n", content, flags=re.IGNORECASE)
+        content = re.sub(r"<li[^>]*>", "- ", content, flags=re.IGNORECASE)
+        content = re.sub(r"<[^>]+>", "", content)
+        content = unescape(content)
+        content = re.sub(r"\n{3,}", "\n\n", content)
+        return content.strip()
+
+    return "这个版本没有填写更新说明。"
+
+
+def extract_release_assets_from_html(html_text: str) -> list[ReleaseAsset]:
+    assets: list[ReleaseAsset] = []
+    seen = set()
+    pattern = re.compile(
+        rf'href="(?P<href>/{re.escape(GITHUB_OWNER)}/{re.escape(GITHUB_REPO)}/releases/download/[^"]+)"',
+        re.IGNORECASE,
+    )
+
+    for match in pattern.finditer(html_text):
+        href = unescape(match.group("href"))
+        url = urllib.parse.urljoin("https://github.com", href)
+        name = urllib.parse.unquote(url.rstrip("/").split("/")[-1])
+        if name in seen:
+            continue
+        seen.add(name)
+        assets.append(ReleaseAsset(name=name, download_url=url, size=0))
+
+    return assets
 
 
 def version_key(version: str) -> tuple:
@@ -485,6 +557,21 @@ class InfoDialog:
         self.window.destroy()
 
 
+class ProgressDialog(InfoDialog):
+    def __init__(self, parent, title: str, message: str):
+        super().__init__(parent, title=title, message=message, button_text="请稍候")
+        self.window.protocol("WM_DELETE_WINDOW", lambda: None)
+        for child in self.window.winfo_children():
+            self._disable_buttons(child)
+
+    def _disable_buttons(self, widget):
+        if isinstance(widget, tk.Button):
+            widget.configure(state=tk.DISABLED)
+            return
+        for child in widget.winfo_children():
+            self._disable_buttons(child)
+
+
 class UpdateReadyDialog(InfoDialog):
     def __init__(self, parent, installer_path: Path, on_apply_update: Callable[[], None]):
         self.installer_path = installer_path
@@ -519,10 +606,34 @@ def show_update_flow(
         owner_root.withdraw()
         root = owner_root
 
-    try:
-        latest = fetch_latest_release()
-    except UpdateError as exc:
-        messagebox.showerror("检查更新", str(exc), parent=root)
+    progress = ProgressDialog(root, title="检查更新", message="正在连接 GitHub 检查最新版本，请稍候...")
+
+    result = {"release": None, "error": None}
+
+    def worker():
+        try:
+            result["release"] = fetch_latest_release()
+        except Exception as exc:
+            result["error"] = exc
+        finally:
+            if progress.window.winfo_exists():
+                progress.window.after(0, progress.close)
+
+    threading.Thread(target=worker, daemon=True).start()
+    progress.show()
+
+    latest = result["release"]
+    error = result["error"]
+
+    if error is not None:
+        message = str(error) if isinstance(error, UpdateError) else f"检查更新失败：{error}"
+        messagebox.showerror("检查更新", message, parent=root)
+        if owner_root is not None:
+            owner_root.destroy()
+        return
+
+    if latest is None:
+        messagebox.showerror("检查更新", "检查更新失败：没有拿到版本信息。", parent=root)
         if owner_root is not None:
             owner_root.destroy()
         return

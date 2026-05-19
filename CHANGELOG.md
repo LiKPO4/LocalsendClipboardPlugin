@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2
+
+- Added a prominent update entry card to the main settings window.
+- Added an immediate visible progress dialog while checking for updates.
+- Added an HTML fallback when the GitHub Release API is rate limited.
+
 ## 1.4.1
 
 - Improved the no-update feedback so users always get a clear completion dialog.

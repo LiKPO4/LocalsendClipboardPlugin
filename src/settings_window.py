@@ -135,6 +135,9 @@ class ModernSettingsWindow:
         content_frame = tk.Frame(main_container, bg=self.COLORS['bg_primary'])
         content_frame.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
 
+        update_card = self._create_update_card(content_frame)
+        update_card.pack(fill=tk.X, pady=(0, 10))
+
         watch_card = self._create_watch_dir_card(content_frame)
         watch_card.pack(fill=tk.X, pady=(0, 10))
 
@@ -214,6 +217,58 @@ class ModernSettingsWindow:
             cursor='hand2'
         )
         browse_btn.pack(side=tk.RIGHT)
+        return card
+
+    def _create_update_card(self, parent):
+        """创建版本与更新卡片"""
+        card, body = self._create_card(
+            parent,
+            "版本与更新",
+            "查看当前版本，并随时从 GitHub Release 检查是否有新版本。"
+        )
+
+        row = tk.Frame(body, bg=self.COLORS['bg_secondary'])
+        row.pack(fill=tk.X)
+
+        info = tk.Frame(row, bg=self.COLORS['bg_secondary'])
+        info.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        current_version = tk.Label(
+            info,
+            text=f"当前版本 v{APP_VERSION}",
+            font=('Microsoft YaHei UI', 11, 'bold'),
+            bg=self.COLORS['bg_secondary'],
+            fg=self.COLORS['text_primary']
+        )
+        current_version.pack(anchor=tk.W)
+
+        hint = tk.Label(
+            info,
+            text="点击右侧按钮可立即检查更新，发现新版本后会展示更新说明并支持一键更新。",
+            font=('Microsoft YaHei UI', 9),
+            bg=self.COLORS['bg_secondary'],
+            fg=self.COLORS['text_secondary'],
+            wraplength=500,
+            justify=tk.LEFT
+        )
+        hint.pack(anchor=tk.W, pady=(4, 0))
+
+        update_btn = tk.Button(
+            row,
+            text="检查更新",
+            command=self._check_update,
+            font=('Microsoft YaHei UI', 10, 'bold'),
+            bg=self.COLORS['accent'],
+            fg='white',
+            activebackground=self.COLORS['accent_hover'],
+            activeforeground='white',
+            relief='flat',
+            bd=0,
+            padx=18,
+            pady=8,
+            cursor='hand2'
+        )
+        update_btn.pack(side=tk.RIGHT, padx=(12, 0))
         return card
 
     def _create_extensions_card(self, parent):
@@ -340,23 +395,6 @@ class ModernSettingsWindow:
 
         btn_container = tk.Frame(content, bg=self.COLORS['bg_primary'])
         btn_container.pack(side=tk.RIGHT)
-
-        update_btn = tk.Button(
-            btn_container,
-            text="检查更新",
-            command=self._check_update,
-            font=('Microsoft YaHei UI', 10),
-            bg=self.COLORS['accent_soft'],
-            fg=self.COLORS['accent'],
-            activebackground='#c7ddff',
-            activeforeground=self.COLORS['accent'],
-            relief='flat',
-            bd=0,
-            padx=18,
-            pady=7,
-            cursor='hand2'
-        )
-        update_btn.pack(side=tk.LEFT, padx=(0, 10))
 
         cancel_btn = tk.Button(
             btn_container,

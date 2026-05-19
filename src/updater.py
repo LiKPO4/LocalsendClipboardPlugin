@@ -523,9 +523,12 @@ class InfoDialog:
         ).pack(anchor=tk.W, padx=20, pady=(0, 18))
 
         footer = tk.Frame(shell, bg=self.COLORS["panel"])
-        footer.pack(fill=tk.X, side=tk.BOTTOM, padx=20, pady=(0, 20))
+        footer.pack(fill=tk.X, padx=20, pady=(0, 20))
 
-        tk.Button(
+        button_wrap = tk.Frame(footer, bg=self.COLORS["panel"])
+        button_wrap.pack(side=tk.RIGHT)
+
+        self.primary_button = tk.Button(
             footer,
             text=button_text,
             command=self.close,
@@ -537,7 +540,9 @@ class InfoDialog:
             padx=22,
             pady=8,
             cursor="hand2",
-        ).pack(side=tk.RIGHT)
+            width=12,
+        )
+        self.primary_button.pack(in_=button_wrap, side=tk.RIGHT)
 
     def _set_window_icon(self):
         try:

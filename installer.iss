@@ -35,9 +35,24 @@ Name: "desktopicon"; Description: "创建桌面快捷方式"; Flags: unchecked
 Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "使用说明.md"; DestDir: "{app}"; Flags: ignoreversion
 
+[InstallDelete]
+Type: files; Name: "{autodesktop}\{#MyAppName}.lnk"
+Type: files; Name: "{autoprograms}\{#MyAppName}.lnk"
+
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"; Check: ShouldCreateDesktopShortcut
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function HadDesktopShortcut: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{autodesktop}\{#MyAppName}.lnk'));
+end;
+
+function ShouldCreateDesktopShortcut: Boolean;
+begin
+  Result := WizardIsTaskSelected('desktopicon') or HadDesktopShortcut();
+end;

@@ -1,6 +1,6 @@
 #define MyAppName "LocalSend图片剪贴板插件"
 #ifndef AppVersion
-  #define AppVersion "1.4.3"
+  #define AppVersion "1.4.4"
 #endif
 #define MyAppPublisher "LocalSendClipboardPlugin"
 #define MyAppExeName "LocalSendClipboardPlugin.exe"

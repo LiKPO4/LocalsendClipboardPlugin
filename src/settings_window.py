@@ -37,7 +37,9 @@ class ModernSettingsWindow:
         """创建主窗口"""
         self.root = tk.Tk()
         self.root.title(f"{APP_NAME}")
-        self.root.geometry("760x680")
+        width = 760
+        height = min(860, max(760, self.root.winfo_screenheight() - 120))
+        self.root.geometry(f"{width}x{height}")
         self.root.resizable(False, False)
         self.root.configure(bg=self.COLORS['bg_primary'])
 
@@ -61,9 +63,9 @@ class ModernSettingsWindow:
         """将窗口居中显示"""
         self.root.update_idletasks()
         width = 760
-        height = 720
+        height = min(860, max(760, self.root.winfo_screenheight() - 120))
         x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        y = max(20, (self.root.winfo_screenheight() // 2) - (height // 2))
         self.root.geometry(f'{width}x{height}+{x}+{y}')
 
     def _create_styles(self):
@@ -179,7 +181,7 @@ class ModernSettingsWindow:
 
         subtitle = tk.Label(
             header,
-            text="调整监听目录、图片格式和自动处理行为。默认窗口已固定为完整显示所有设置项。",
+            text="调整监听目录、图片格式和自动处理行为。",
             font=('Microsoft YaHei UI', 9),
             bg=self.COLORS['bg_primary'],
             fg=self.COLORS['text_secondary'],

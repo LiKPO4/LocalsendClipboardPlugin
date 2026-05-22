@@ -8,7 +8,10 @@ from .config import Config, APP_NAME, APP_VERSION
 
 
 class ModernSettingsWindow:
-    """更清晰的固定布局设置窗口"""
+    """轻量紧凑的设置窗口"""
+
+    WINDOW_WIDTH = 620
+    WINDOW_HEIGHT = 600
 
     COLORS = {
         'bg_primary': '#eef2f7',
@@ -37,8 +40,8 @@ class ModernSettingsWindow:
         """创建主窗口"""
         self.root = tk.Tk()
         self.root.title(f"{APP_NAME}")
-        width = 760
-        height = min(860, max(760, self.root.winfo_screenheight() - 120))
+        width = self.WINDOW_WIDTH
+        height = min(self.WINDOW_HEIGHT, self.root.winfo_screenheight() - 80)
         self.root.geometry(f"{width}x{height}")
         self.root.resizable(False, False)
         self.root.configure(bg=self.COLORS['bg_primary'])
@@ -62,8 +65,8 @@ class ModernSettingsWindow:
     def _center_window(self):
         """将窗口居中显示"""
         self.root.update_idletasks()
-        width = 760
-        height = min(860, max(760, self.root.winfo_screenheight() - 120))
+        width = self.WINDOW_WIDTH
+        height = min(self.WINDOW_HEIGHT, self.root.winfo_screenheight() - 80)
         x = (self.root.winfo_screenwidth() // 2) - (width // 2)
         y = max(20, (self.root.winfo_screenheight() // 2) - (height // 2))
         self.root.geometry(f'{width}x{height}+{x}+{y}')
@@ -84,7 +87,7 @@ class ModernSettingsWindow:
         )
 
         header = tk.Frame(card, bg=self.COLORS['bg_secondary'])
-        header.pack(fill=tk.X, padx=16, pady=(12, 8))
+        header.pack(fill=tk.X, padx=14, pady=(10, 6))
 
         title_label = tk.Label(
             header,
@@ -99,16 +102,16 @@ class ModernSettingsWindow:
             desc_label = tk.Label(
                 header,
                 text=description,
-                font=('Microsoft YaHei UI', 9),
+                font=('Microsoft YaHei UI', 8),
                 bg=self.COLORS['bg_secondary'],
                 fg=self.COLORS['text_hint'],
-                wraplength=660,
+                wraplength=540,
                 justify=tk.LEFT
             )
-            desc_label.pack(anchor=tk.W, pady=(2, 0))
+            desc_label.pack(anchor=tk.W, pady=(1, 0))
 
         body = tk.Frame(card, bg=self.COLORS['bg_secondary'])
-        body.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 12))
+        body.pack(fill=tk.BOTH, expand=True, padx=14, pady=(0, 10))
         return card, body
 
     def _make_entry(self, parent, textvariable):
@@ -116,11 +119,11 @@ class ModernSettingsWindow:
         return tk.Entry(
             parent,
             textvariable=textvariable,
-            font=('Consolas', 11),
+            font=('Consolas', 10),
             bg=self.COLORS['bg_muted'],
             fg=self.COLORS['text_primary'],
             relief='flat',
-            bd=10,
+            bd=7,
             highlightthickness=1,
             highlightcolor=self.COLORS['accent'],
             highlightbackground=self.COLORS['border'],
@@ -130,24 +133,24 @@ class ModernSettingsWindow:
     def _create_widgets(self):
         """创建所有 UI 组件"""
         main_container = tk.Frame(self.root, bg=self.COLORS['bg_primary'])
-        main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=16)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=14, pady=12)
 
         self._create_header(main_container)
 
         content_frame = tk.Frame(main_container, bg=self.COLORS['bg_primary'])
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
+        content_frame.pack(fill=tk.BOTH, expand=True, pady=(9, 0))
 
         update_card = self._create_update_card(content_frame)
-        update_card.pack(fill=tk.X, pady=(0, 10))
+        update_card.pack(fill=tk.X, pady=(0, 8))
 
         watch_card = self._create_watch_dir_card(content_frame)
-        watch_card.pack(fill=tk.X, pady=(0, 10))
+        watch_card.pack(fill=tk.X, pady=(0, 8))
 
         ext_card = self._create_extensions_card(content_frame)
-        ext_card.pack(fill=tk.X, pady=(0, 10))
+        ext_card.pack(fill=tk.X, pady=(0, 8))
 
         options_card = self._create_options_card(content_frame)
-        options_card.pack(fill=tk.X, pady=(0, 10))
+        options_card.pack(fill=tk.X, pady=(0, 8))
 
         self._create_footer(main_container)
 
@@ -162,7 +165,7 @@ class ModernSettingsWindow:
         title = tk.Label(
             title_row,
             text=APP_NAME,
-            font=('Microsoft YaHei UI', 22, 'bold'),
+            font=('Microsoft YaHei UI', 17, 'bold'),
             bg=self.COLORS['bg_primary'],
             fg=self.COLORS['text_primary']
         )
@@ -171,23 +174,23 @@ class ModernSettingsWindow:
         badge = tk.Label(
             title_row,
             text=f"v{APP_VERSION}",
-            font=('Microsoft YaHei UI', 9, 'bold'),
+            font=('Microsoft YaHei UI', 8, 'bold'),
             bg=self.COLORS['accent_soft'],
             fg=self.COLORS['accent'],
-            padx=10,
-            pady=4
+            padx=8,
+            pady=3
         )
-        badge.pack(side=tk.RIGHT, pady=(4, 0))
+        badge.pack(side=tk.RIGHT, pady=(2, 0))
 
         subtitle = tk.Label(
             header,
             text="调整监听目录、图片格式和自动处理行为。",
-            font=('Microsoft YaHei UI', 9),
+            font=('Microsoft YaHei UI', 8),
             bg=self.COLORS['bg_primary'],
             fg=self.COLORS['text_secondary'],
             justify=tk.LEFT
         )
-        subtitle.pack(anchor=tk.W, pady=(8, 0))
+        subtitle.pack(anchor=tk.W, pady=(5, 0))
 
     def _create_watch_dir_card(self, parent):
         """创建监听目录卡片"""
@@ -207,15 +210,15 @@ class ModernSettingsWindow:
             row,
             text="选择文件夹",
             command=self._browse_dir,
-            font=('Microsoft YaHei UI', 10, 'bold'),
+            font=('Microsoft YaHei UI', 9, 'bold'),
             bg=self.COLORS['accent_soft'],
             fg=self.COLORS['accent'],
             activebackground='#c7ddff',
             activeforeground=self.COLORS['accent'],
             relief='flat',
             bd=0,
-            padx=14,
-            pady=6,
+            padx=12,
+            pady=5,
             cursor='hand2'
         )
         browse_btn.pack(side=tk.RIGHT)
@@ -226,7 +229,7 @@ class ModernSettingsWindow:
         card, body = self._create_card(
             parent,
             "版本与更新",
-            "查看当前版本，并随时从 GitHub Release 检查是否有新版本。"
+            "从 GitHub Release 检查并安装新版本。"
         )
 
         row = tk.Frame(body, bg=self.COLORS['bg_secondary'])
@@ -238,7 +241,7 @@ class ModernSettingsWindow:
         current_version = tk.Label(
             info,
             text=f"当前版本 v{APP_VERSION}",
-            font=('Microsoft YaHei UI', 11, 'bold'),
+            font=('Microsoft YaHei UI', 10, 'bold'),
             bg=self.COLORS['bg_secondary'],
             fg=self.COLORS['text_primary']
         )
@@ -246,31 +249,31 @@ class ModernSettingsWindow:
 
         hint = tk.Label(
             info,
-            text="点击右侧按钮可立即检查更新，发现新版本后会展示更新说明并支持一键更新。",
-            font=('Microsoft YaHei UI', 9),
+            text="发现新版本后会显示更新说明，并支持一键更新。",
+            font=('Microsoft YaHei UI', 8),
             bg=self.COLORS['bg_secondary'],
             fg=self.COLORS['text_secondary'],
-            wraplength=500,
+            wraplength=390,
             justify=tk.LEFT
         )
-        hint.pack(anchor=tk.W, pady=(4, 0))
+        hint.pack(anchor=tk.W, pady=(2, 0))
 
         update_btn = tk.Button(
             row,
             text="检查更新",
             command=self._check_update,
-            font=('Microsoft YaHei UI', 10, 'bold'),
+            font=('Microsoft YaHei UI', 9, 'bold'),
             bg=self.COLORS['accent'],
             fg='white',
             activebackground=self.COLORS['accent_hover'],
             activeforeground='white',
             relief='flat',
             bd=0,
-            padx=18,
-            pady=8,
+            padx=14,
+            pady=7,
             cursor='hand2'
         )
-        update_btn.pack(side=tk.RIGHT, padx=(12, 0))
+        update_btn.pack(side=tk.RIGHT, padx=(10, 0))
         return card
 
     def _create_extensions_card(self, parent):
@@ -278,7 +281,7 @@ class ModernSettingsWindow:
         card, body = self._create_card(
             parent,
             "图片格式",
-            "填写需要自动复制的图片扩展名，多个格式请用英文逗号分隔，例如：.jpg, .png, .webp"
+            "多个格式请用英文逗号分隔，例如：.jpg, .png, .webp"
         )
 
         if self.config.image_extensions:
@@ -296,13 +299,13 @@ class ModernSettingsWindow:
         card, body = self._create_card(
             parent,
             "功能选项",
-            "这些行为会在检测到新图片后自动生效。"
+            "检测到新图片后自动生效。"
         )
 
         options = [
-            ("delete_var", "复制后删除原文件", "图片复制到剪贴板后，自动删除源文件。"),
-            ("notify_var", "显示桌面通知", "每次处理完成后显示一条系统通知。"),
-            ("autostart_var", "开机自动启动", "Windows 登录后自动启动这个工具。"),
+            ("delete_var", "复制后删除原文件", "复制到剪贴板后自动删除源文件。"),
+            ("notify_var", "显示桌面通知", "处理完成后显示系统通知。"),
+            ("autostart_var", "开机自动启动", "Windows 登录后自动启动，并显示在启动项中。"),
         ]
 
         self.option_vars = {}
@@ -335,7 +338,7 @@ class ModernSettingsWindow:
             highlightthickness=1,
             bd=0
         )
-        option_frame.pack(fill=tk.X, pady=(0, 6 if add_spacing else 0))
+        option_frame.pack(fill=tk.X, pady=(0, 5 if add_spacing else 0))
 
         checkbox = tk.Checkbutton(
             option_frame,
@@ -347,18 +350,18 @@ class ModernSettingsWindow:
             activeforeground=self.COLORS['accent'],
             highlightthickness=0,
             bd=0,
-            padx=4,
+            padx=2,
             pady=0
         )
-        checkbox.pack(side=tk.LEFT, padx=(12, 8), pady=8)
+        checkbox.pack(side=tk.LEFT, padx=(10, 7), pady=6)
 
         text_frame = tk.Frame(option_frame, bg=self.COLORS['bg_option'])
-        text_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 12), pady=8)
+        text_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10), pady=6)
 
         title_label = tk.Label(
             text_frame,
             text=title,
-            font=('Microsoft YaHei UI', 10, 'bold'),
+            font=('Microsoft YaHei UI', 9, 'bold'),
             bg=self.COLORS['bg_option'],
             fg=self.COLORS['text_primary']
         )
@@ -367,21 +370,21 @@ class ModernSettingsWindow:
         desc_label = tk.Label(
             text_frame,
             text=desc,
-            font=('Microsoft YaHei UI', 9),
+            font=('Microsoft YaHei UI', 8),
             bg=self.COLORS['bg_option'],
             fg=self.COLORS['text_secondary'],
-            wraplength=560,
+            wraplength=500,
             justify=tk.LEFT
         )
-        desc_label.pack(anchor=tk.W, pady=(2, 0))
+        desc_label.pack(anchor=tk.W, pady=(1, 0))
 
     def _create_footer(self, parent):
         """创建底部区域"""
         footer = tk.Frame(parent, bg=self.COLORS['bg_primary'])
-        footer.pack(fill=tk.X, pady=(12, 0))
+        footer.pack(fill=tk.X, pady=(8, 0))
 
         divider = tk.Frame(footer, height=1, bg=self.COLORS['border'])
-        divider.pack(fill=tk.X, pady=(0, 10))
+        divider.pack(fill=tk.X, pady=(0, 8))
 
         content = tk.Frame(footer, bg=self.COLORS['bg_primary'])
         content.pack(fill=tk.X)
@@ -389,7 +392,7 @@ class ModernSettingsWindow:
         hint = tk.Label(
             content,
             text="保存后立即生效，监听目录会自动更新。",
-            font=('Microsoft YaHei UI', 9),
+            font=('Microsoft YaHei UI', 8),
             bg=self.COLORS['bg_primary'],
             fg=self.COLORS['text_hint']
         )
@@ -402,7 +405,7 @@ class ModernSettingsWindow:
             btn_container,
             text="取消",
             command=self._on_close,
-            font=('Microsoft YaHei UI', 10),
+            font=('Microsoft YaHei UI', 9),
             bg=self.COLORS['bg_secondary'],
             fg=self.COLORS['text_secondary'],
             activebackground=self.COLORS['bg_muted'],
@@ -411,25 +414,25 @@ class ModernSettingsWindow:
             highlightthickness=1,
             highlightbackground=self.COLORS['border'],
             bd=0,
-            padx=18,
-            pady=7,
+            padx=14,
+            pady=6,
             cursor='hand2'
         )
-        cancel_btn.pack(side=tk.LEFT, padx=(0, 10))
+        cancel_btn.pack(side=tk.LEFT, padx=(0, 8))
 
         save_btn = tk.Button(
             btn_container,
             text="保存设置",
             command=self._save,
-            font=('Microsoft YaHei UI', 10, 'bold'),
+            font=('Microsoft YaHei UI', 9, 'bold'),
             bg=self.COLORS['accent'],
             fg='white',
             activebackground=self.COLORS['accent_hover'],
             activeforeground='white',
             relief='flat',
             bd=0,
-            padx=20,
-            pady=8,
+            padx=16,
+            pady=7,
             cursor='hand2'
         )
         save_btn.pack(side=tk.LEFT)

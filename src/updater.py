@@ -230,44 +230,69 @@ def launch_installer(installer_path: Path):
 
 def schedule_installer_after_exit(installer_path: Path, pid: int):
     launcher_path = Path(tempfile.gettempdir()) / f"{APP_ID}_update_launcher.ps1"
+    vbs_launcher_path = Path(tempfile.gettempdir()) / f"{APP_ID}_update_launcher.vbs"
+    log_path = Path(tempfile.gettempdir()) / f"{APP_ID}_update_launcher.log"
     launcher_script = textwrap.dedent(
         f"""
+        $ErrorActionPreference = 'Stop'
         $pidToWait = {pid}
         $installerPath = {str(installer_path)!r}
-        $logPath = Join-Path $env:TEMP "{APP_ID}_update_launcher.log"
+        $logPath = {str(log_path)!r}
+
+        function Write-LauncherLog($message) {{
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+            Add-Content -LiteralPath $logPath -Encoding utf8 -Value "[$timestamp] $message"
+        }}
 
         try {{
-            while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) {{
+            Write-LauncherLog "launcher started; waiting for pid $pidToWait"
+
+            $deadline = (Get-Date).AddSeconds(90)
+            while ((Get-Date) -lt $deadline -and (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue)) {{
                 Start-Sleep -Milliseconds 700
             }}
 
             Start-Sleep -Seconds 1
 
-            Start-Process -FilePath $installerPath -ArgumentList @(
+            if (-not (Test-Path -LiteralPath $installerPath)) {{
+                throw "installer not found: $installerPath"
+            }}
+
+            if (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) {{
+                Write-LauncherLog "pid $pidToWait is still running after timeout; starting installer with close-application flags"
+            }} else {{
+                Write-LauncherLog "pid $pidToWait exited; starting installer"
+            }}
+
+            $process = Start-Process -FilePath $installerPath -ArgumentList @(
                 '/SP-',
                 '/SILENT',
                 '/NOCANCEL',
                 '/NORESTART',
                 '/CLOSEAPPLICATIONS',
                 '/FORCECLOSEAPPLICATIONS'
-            )
+            ) -WindowStyle Normal -PassThru
+            Write-LauncherLog "installer process started; pid $($process.Id)"
         }} catch {{
-            $_ | Out-File -FilePath $logPath -Encoding utf8
+            Write-LauncherLog "ERROR: $($_.Exception.Message)"
             throw
         }}
         """
     ).strip()
     launcher_path.write_text(launcher_script, encoding="utf-8")
+
+    powershell_command = (
+        f'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{launcher_path}"'
+    ).replace('"', '""')
+    vbs_launcher_path.write_text(
+        f'CreateObject("WScript.Shell").Run "{powershell_command}", 0, False',
+        encoding="utf-8",
+    )
+
     subprocess.Popen(
         [
-            "powershell.exe",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-File",
-            str(launcher_path),
+            "wscript.exe",
+            str(vbs_launcher_path),
         ],
         close_fds=True,
         creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0),
@@ -657,9 +682,12 @@ class UpdateReadyDialog(InfoDialog):
 
     def close(self):
         try:
+            self.primary_button.configure(text="正在关闭...", state=tk.DISABLED)
+            self.window.update_idletasks()
             schedule_installer_after_exit(self.installer_path, os.getpid())
         except Exception as exc:
             messagebox.showerror("更新失败", f"无法启动安装程序：{exc}", parent=self.window)
+            self.primary_button.configure(text="关闭软件并继续更新", state=tk.NORMAL)
             return
         self.window.destroy()
         self.on_apply_update()

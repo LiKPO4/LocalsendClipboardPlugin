@@ -19,8 +19,9 @@ class ImageFileHandler:
         if event.is_directory:
             return
 
-        file_path = Path(event.src_path)
+        self.process_path(Path(event.src_path))
 
+    def process_path(self, file_path: Path):
         if str(file_path) in self._processed_files:
             return
 
@@ -93,10 +94,15 @@ class ImageFileHandler:
 
 class FileWatcher:
     def __init__(self, config: Config, on_image_copied: Optional[Callable] = None):
+        self.config = config
+        self.on_image_copied = on_image_copied
+        self.observer = None
+        self.handler = None
+        self._running = False
+
+    def _create_observer(self):
         from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
-
-        self.config = config
 
         class Handler(FileSystemEventHandler):
             def __init__(handler_self, handler_config, handler_callback):
@@ -106,15 +112,19 @@ class FileWatcher:
             def on_created(handler_self, event):
                 handler_self.handler.on_created(event)
 
+            def on_moved(handler_self, event):
+                if not event.is_directory:
+                    handler_self.handler.process_path(Path(event.dest_path))
+
         self.observer = Observer()
-        self.handler = Handler(config, on_image_copied)
-        self._running = False
+        self.handler = Handler(self.config, self.on_image_copied)
 
     def start(self):
         if self._running:
             return
 
         watch_dir = self.config.ensure_watch_dir()
+        self._create_observer()
 
         self.observer.schedule(
             self.handler,
@@ -130,6 +140,8 @@ class FileWatcher:
             self.observer.stop()
             self.observer.join()
             self._running = False
+            self.observer = None
+            self.handler = None
             print("停止监听")
 
     def is_running(self) -> bool:

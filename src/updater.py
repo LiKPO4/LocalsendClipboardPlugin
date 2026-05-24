@@ -39,6 +39,24 @@ class UpdateError(Exception):
     pass
 
 
+def center_window(window, parent=None, width: int | None = None, height: int | None = None):
+    window.update_idletasks()
+    width = width or window.winfo_width()
+    height = height or window.winfo_height()
+
+    if parent is not None and parent.winfo_exists() and parent.winfo_viewable():
+        parent.update_idletasks()
+        x = parent.winfo_rootx() + (parent.winfo_width() - width) // 2
+        y = parent.winfo_rooty() + (parent.winfo_height() - height) // 2
+    else:
+        x = (window.winfo_screenwidth() - width) // 2
+        y = (window.winfo_screenheight() - height) // 2
+
+    x = max(0, x)
+    y = max(0, y)
+    window.geometry(f"{width}x{height}+{x}+{y}")
+
+
 @dataclass
 class ReleaseAsset:
     name: str
@@ -339,6 +357,7 @@ class UpdateDialog:
         self._busy = False
 
         self._create_widgets()
+        center_window(self.window, self.parent, 720, 560)
 
     def _set_window_icon(self, window):
         try:
@@ -581,10 +600,12 @@ class InfoDialog:
         "border": "#cdd8eb",
     }
 
-    def __init__(self, parent, title: str, message: str, button_text: str = "知道了"):
+    def __init__(self, parent, title: str, message: str, button_text: str = "知道了", button_width: int = 16):
+        self.parent = parent
+        self.button_width = button_width
         self.window = tk.Toplevel(parent)
         self.window.title(title)
-        self.window.geometry("500x250")
+        self.window.geometry("460x280")
         self.window.resizable(False, False)
         self.window.configure(bg=self.COLORS["bg"])
         self.window.transient(parent)
@@ -599,29 +620,29 @@ class InfoDialog:
         tk.Label(
             shell,
             text=title,
-            font=("Microsoft YaHei UI", 17, "bold"),
+            font=("Microsoft YaHei UI", 15, "bold"),
             bg=self.COLORS["panel"],
             fg=self.COLORS["text"],
-        ).pack(anchor=tk.W, padx=20, pady=(20, 10))
+        ).pack(anchor=tk.W, padx=18, pady=(18, 10))
 
         tk.Label(
             shell,
             text=message,
-            font=("Microsoft YaHei UI", 10),
+            font=("Microsoft YaHei UI", 9),
             bg=self.COLORS["panel"],
             fg=self.COLORS["muted"],
             justify=tk.LEFT,
-            wraplength=420,
-        ).pack(anchor=tk.W, padx=20, pady=(0, 18))
+            wraplength=390,
+        ).pack(anchor=tk.W, padx=18, pady=(0, 12))
 
         footer = tk.Frame(shell, bg=self.COLORS["panel"])
-        footer.pack(fill=tk.X, padx=20, pady=(0, 20))
+        footer.pack(side=tk.BOTTOM, fill=tk.X, padx=18, pady=(0, 16))
 
         button_wrap = tk.Frame(footer, bg=self.COLORS["panel"])
         button_wrap.pack(side=tk.RIGHT)
 
         self.primary_button = tk.Button(
-            footer,
+            button_wrap,
             text=button_text,
             command=self.close,
             font=("Microsoft YaHei UI", 10, "bold"),
@@ -632,9 +653,10 @@ class InfoDialog:
             padx=22,
             pady=8,
             cursor="hand2",
-            width=12,
+            width=self.button_width,
         )
-        self.primary_button.pack(in_=button_wrap, side=tk.RIGHT)
+        self.primary_button.pack(side=tk.RIGHT)
+        center_window(self.window, self.parent, 460, 280)
 
     def _set_window_icon(self):
         try:
@@ -678,6 +700,7 @@ class UpdateReadyDialog(InfoDialog):
             title="准备开始更新",
             message="更新包已经下载完成。\n\n软件当前正在运行，请点击下面的按钮关闭软件，关闭后会自动继续安装更新。",
             button_text="关闭软件并继续更新",
+            button_width=20,
         )
 
     def close(self):

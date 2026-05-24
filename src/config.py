@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from typing import List
 
 APP_NAME = "LocalSend图片剪贴板插件"
-APP_VERSION = "1.4.7"
+APP_VERSION = "1.4.8"
 APP_ID = "LocalSendClipboardPlugin"
 
 DEFAULT_CONFIG = {

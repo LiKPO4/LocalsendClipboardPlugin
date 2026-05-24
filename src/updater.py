@@ -196,6 +196,18 @@ def select_installer_asset(release: ReleaseInfo) -> Optional[ReleaseAsset]:
     for asset in release.assets:
         if asset.name.startswith(INSTALLER_PREFIX) and asset.name.endswith(".exe"):
             return asset
+    for asset in release.assets:
+        lowered_name = asset.name.lower()
+        if "setup" in lowered_name and lowered_name.endswith(".exe"):
+            return asset
+    if release.version:
+        installer_name = f"{INSTALLER_PREFIX}{release.version}.exe"
+        tag_name = release.tag_name or f"v{release.version}"
+        download_url = (
+            f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/download/"
+            f"{urllib.parse.quote(tag_name)}/{urllib.parse.quote(installer_name)}"
+        )
+        return ReleaseAsset(name=installer_name, download_url=download_url, size=0)
     return None
 
 

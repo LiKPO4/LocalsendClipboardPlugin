@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from typing import List
 
 APP_NAME = "LocalSend图片剪贴板插件"
-APP_VERSION = "1.4.10"
+APP_VERSION = "1.4.11"
 APP_ID = "LocalSendClipboardPlugin"
 
 DEFAULT_CONFIG = {
@@ -65,7 +65,7 @@ class Config:
         if loaded is None:
             loaded = cls()
 
-        # Always trust the real registry status over the cached config flag.
+        loaded._migrate_auto_start_registry_to_shortcut()
         loaded.auto_start = loaded.is_auto_start_enabled()
         return loaded
 
@@ -193,6 +193,31 @@ class Config:
             print(f"[ERROR] 查询开机启动状态失败: {e}")
             return None
 
+    def _migrate_auto_start_registry_to_shortcut(self):
+        """把旧版注册表启动项迁移为单一启动文件夹快捷方式，避免任务管理器显示两条。"""
+        registry_value = self._query_auto_start_value()
+        if registry_value is None:
+            return
+
+        key = None
+        try:
+            import winreg
+
+            key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_ALL_ACCESS)
+            if not self._is_auto_start_shortcut_enabled():
+                self._create_auto_start_shortcut()
+            self._delete_auto_start_values(key)
+            print("[INFO] 已清理旧版注册表开机启动项，保留启动文件夹快捷方式")
+        except Exception as e:
+            print(f"[ERROR] 迁移开机启动项失败: {e}")
+        finally:
+            if key is not None:
+                try:
+                    winreg.CloseKey(key)
+                except Exception:
+                    pass
+
     def set_auto_start(self, enable: bool):
         """设置开机启动"""
         if os.name != 'nt':
@@ -206,11 +231,9 @@ class Config:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_ALL_ACCESS)
 
             if enable:
-                command = self._get_auto_start_command()
                 self._delete_auto_start_values(key)
-                winreg.SetValueEx(key, AUTO_START_REGISTRY_NAME, 0, winreg.REG_SZ, command)
                 shortcut_ok = self._create_auto_start_shortcut()
-                print(f"[INFO] 已启用开机启动: {command}")
+                print("[INFO] 已启用开机启动")
             else:
                 self._delete_auto_start_values(key)
                 self._delete_auto_start_shortcut()
@@ -231,4 +254,4 @@ class Config:
 
     def is_auto_start_enabled(self) -> bool:
         """检查开机启动是否已启用"""
-        return self._query_auto_start_value() is not None or self._is_auto_start_shortcut_enabled()
+        return self._is_auto_start_shortcut_enabled()

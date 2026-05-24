@@ -4,9 +4,10 @@ import threading
 import traceback
 import ctypes
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 from pystray._base import MenuItem as Item
-from pystray._win32 import Icon as TrayIcon
+from pystray._win32 import Icon as BaseTrayIcon
+from pystray._win32 import win32
 
 from .assets import load_app_icon_image
 from .config import Config, APP_NAME, APP_VERSION
@@ -14,6 +15,23 @@ from .watcher import FileWatcher
 from .settings_window import SettingsWindow
 from .notifier import notifier
 from .updater import show_update_flow
+
+
+WM_LBUTTONDBLCLK = 0x0203
+
+
+class ClickableTrayIcon(BaseTrayIcon):
+    def __init__(self, *args, on_left_click: Optional[Callable[[], None]] = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._on_left_click_callback = on_left_click
+
+    def _on_notify(self, wparam, lparam):
+        if lparam in (win32.WM_LBUTTONUP, WM_LBUTTONDBLCLK):
+            if self._on_left_click_callback:
+                self._on_left_click_callback()
+                return
+
+        super()._on_notify(wparam, lparam)
 
 
 class SingleInstance:
@@ -88,7 +106,7 @@ class TrayApp:
         try:
             self.config = Config.load()
             self.watcher = FileWatcher(self.config, on_image_copied=self._on_image_copied)
-            self.tray: Optional[TrayIcon] = None
+            self.tray: Optional[ClickableTrayIcon] = None
 
             self._show_settings_event = threading.Event()
             self._show_update_event = threading.Event()
@@ -103,11 +121,12 @@ class TrayApp:
 
     def _create_tray(self):
         try:
-            self.tray = TrayIcon(
+            self.tray = ClickableTrayIcon(
                 "localsend_clipboard",
                 load_app_icon_image(),
                 f"{APP_NAME} v{APP_VERSION}",
-                self._build_menu("运行中")
+                self._build_menu("运行中"),
+                on_left_click=self._open_settings,
             )
             notifier.register_tray_icon(self.tray)
         except Exception as e:
